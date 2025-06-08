@@ -65,6 +65,24 @@ namespace TestAPI.Controllers
         {
             return StatusCode(503, "Service is currently unavailable. Try again later.");
         }
+
+
+       [HttpGet("jsonsample")]
+        public IActionResult GetHardcodedJson()
+        {
+            var data = new
+            {
+                Id = 1,
+                Name = "Sample Item",
+                Description = "This is a hardcoded JSON object returned by the API.",
+                Tags = new[] { "sample", "json", "demo" },
+                CreatedAt = DateTime.UtcNow
+            };
+
+            return Ok(data);
+        }
+
     }
+
 }
 
