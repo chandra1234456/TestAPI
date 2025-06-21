@@ -81,6 +81,20 @@ namespace TestAPI.Controllers
 
             return Ok(data);
         }
+        [HttpGet("image")]
+        public IActionResult GetImageJson()
+        {
+            var imageData = new
+            {
+                Id = 101,
+                Title = "Sample Image",
+                Description = "This is a sample image with a public URL.",
+                ImageUrl = "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.pexels.com%2Fsearch%2Fbeautiful%2F&psig=AOvVaw0UutIxF_ZppS5ZDgaSwtPT&ust=1749468418867000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCOi6ssfb4Y0DFQAAAAAdAAAAABAE"
+            };
+
+            return Ok(imageData);
+        }
+
 
     }
 

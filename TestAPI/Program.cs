@@ -6,6 +6,16 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+// In Program.cs
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.ListenAnyIP(5214);        // HTTP
+    serverOptions.ListenAnyIP(7064, listenOptions =>
+    {
+        listenOptions.UseHttps();          // HTTPS
+    });
+});
+
 
 var app = builder.Build();
 
