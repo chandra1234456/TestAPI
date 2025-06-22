@@ -67,7 +67,7 @@ namespace TestAPI.Controllers
         }
 
 
-       [HttpGet("jsonsample")]
+        [HttpGet("jsonsample")]
         public IActionResult GetHardcodedJson()
         {
             var data = new
@@ -94,6 +94,35 @@ namespace TestAPI.Controllers
 
             return Ok(imageData);
         }
+        [HttpGet("test")]
+        public IActionResult TestResponse()
+        {
+            var response = new
+            {
+                status = "success",
+                message = "Connected to backend",
+                appVersion = "1.0.3",
+                serverTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC"
+            };
+
+            return Ok(response);
+        }
+        [HttpGet("download-apk")]
+        public IActionResult DownloadApk([FromQuery] string version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return BadRequest("Version required");
+
+            var apkPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "APK", $"app_{version}.apk");
+
+            if (!System.IO.File.Exists(apkPath))
+                return NotFound("APK not found");
+
+            var bytes = System.IO.File.ReadAllBytes(apkPath);
+            return File(bytes, "application/vnd.android.package-archive", $"app_{version}.apk");
+        }
+
+
 
 
     }
