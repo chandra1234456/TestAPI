@@ -10,7 +10,8 @@ builder.Services.AddSwaggerGen();
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ListenAnyIP(5214);        // HTTP
-    serverOptions.ListenAnyIP(7064, listenOptions =>
+    serverOptions.ListenAnyIP(7064, listenOptions =>// Listen on all network interfaces
+
     {
         listenOptions.UseHttps();          // HTTPS
     });
