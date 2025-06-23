@@ -1,33 +1,27 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+// Add services
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-// In Program.cs
-builder.WebHost.ConfigureKestrel(serverOptions =>
+
+// Configure Kestrel for HTTP only on port 5000
+builder.WebHost.ConfigureKestrel(options =>
 {
-    serverOptions.ListenAnyIP(5214);        // HTTP
-    serverOptions.ListenAnyIP(7064, listenOptions =>// Listen on all network interfaces
-
-    {
-        listenOptions.UseHttps();          // HTTPS
-    });
+    options.ListenAnyIP(5000); // HTTP
 });
-
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Enable Swagger UI always (not just in Development)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TestAPI v1");
+});
 
-//app.UseHttpsRedirection();
+// If you want to enable HTTPS redirection, uncomment below (usually your host handles it)
+// app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
