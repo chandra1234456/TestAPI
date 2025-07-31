@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System;
@@ -19,31 +20,38 @@ namespace TestAPI.Controllers
         [HttpPost("upload")]
         public async Task<IActionResult> UploadLog([FromForm] LogUploadModel model)
         {
-            if (model.File == null || model.File.Length == 0)
-                return BadRequest("No file uploaded.");
-
-            string content;
-            using (var reader = new StreamReader(model.File.OpenReadStream()))
+            try
             {
-                content = await reader.ReadToEndAsync();
+                if (model.File == null || model.File.Length == 0)
+                    return BadRequest("No file uploaded.");
+
+                using var reader = new StreamReader(model.File.OpenReadStream());
+                string content = await reader.ReadToEndAsync();
+
+                var logEntry = new LogEntry
+                {
+                    FileName = model.File.FileName,
+                    Content = content,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.LogEntries.Add(logEntry);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($"Log file saved: {model.File.FileName}");
+
+                return Ok(new { message = "Log saved successfully." });
             }
-
-            var logEntry = new LogEntry
+            catch (Exception ex)
             {
-                FileName = model.File.FileName,
-                Content = content,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.LogEntries.Add(logEntry);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Log saved successfully." });
+                Console.WriteLine("UploadLog error: " + ex.Message);
+                return StatusCode(500, "Server error: " + ex.Message);
+            }
         }
     }
 
     public class LogUploadModel
     {
-        public Microsoft.AspNetCore.Http.IFormFile File { get; set; }
+        public IFormFile File { get; set; }
     }
 }
