@@ -7,6 +7,7 @@
     public string Content { get; set; }    // Same here
     public string DeviceInfo { get; set; }    // Same here
     public string ExceptionType { get; set; }    // Same here
+    public long FileSize { get; set; }    // Same here
 
     public DateTime CreatedAt { get; set; }
 }

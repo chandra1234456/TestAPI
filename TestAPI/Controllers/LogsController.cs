@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -17,10 +20,9 @@ namespace TestAPI.Controllers
 
         public LogsController(AppDbContext context, ILogger<LogsController> logger)
         {
-            _context = context;
-            _logger = logger;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
-
         [HttpPost("upload")]
         public async Task<IActionResult> UploadLog([FromForm] LogUploadModel model)
         {
@@ -30,7 +32,6 @@ namespace TestAPI.Controllers
                 return BadRequest("No file uploaded or file is empty.");
             }
 
-            // Validate file size (e.g., 5MB max)
             if (model.File.Length > 5 * 1024 * 1024)
             {
                 _logger.LogWarning($"File too large: {model.File.Length} bytes");
@@ -47,8 +48,9 @@ namespace TestAPI.Controllers
                     FileName = model.File.FileName,
                     Content = content,
                     CreatedAt = DateTime.UtcNow,
-                    DeviceInfo = ExtractDeviceInfo(content), // Optional: parse device info
-                    ExceptionType = ExtractExceptionType(content) // Optional: parse exception
+                    DeviceInfo = ExtractDeviceInfo(content),
+                    ExceptionType = ExtractExceptionType(content),
+                    FileSize = model.File.Length // ✅ Don't forget this
                 };
 
                 await _context.LogEntries.AddAsync(logEntry);
@@ -74,19 +76,67 @@ namespace TestAPI.Controllers
             }
         }
 
-        // Optional helper methods to parse crash log
+
+
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllLogs()
+        {
+            try
+            {
+                var logs = await _context.LogEntries // <- FIXED
+                    .AsNoTracking()
+                    .OrderByDescending(l => l.CreatedAt)
+                    .Select(l => new LoginEntryViewModel // <- FIXED
+                    {
+                        Id = l.Id,
+                        FileName = l.FileName,
+                        CreatedAt = l.CreatedAt,
+                        ExceptionType = l.ExceptionType ?? "Unknown",
+                        DeviceInfo = l.DeviceInfo ?? "Unknown device",
+                        FileSize = l.FileSize,
+                        ContentPreview = string.IsNullOrEmpty(l.Content)
+                            ? "[Empty content]"
+                            : l.Content.Length > 100
+                                ? l.Content.Substring(0, 100) + "..."
+                                : l.Content
+                    })
+                    .ToListAsync();
+
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching all logs from database.");
+                return StatusCode(500, new
+                {
+                    error = "Failed to retrieve logs",
+                    details = ex.Message
+                });
+            }
+        }
+
+
         private string ExtractDeviceInfo(string content)
         {
             try
             {
-                var manufacturerMatch = Regex.Match(content, @"Manufacturer:\s*(.+)");
-                var modelMatch = Regex.Match(content, @"Model:\s*(.+)");
-                var versionMatch = Regex.Match(content, @"Version:\s*(.+)");
+                if (string.IsNullOrWhiteSpace(content)) return "Unknown device";
 
-                return $"{manufacturerMatch.Groups[1].Value} {modelMatch.Groups[1].Value} (Android {versionMatch.Groups[1].Value})";
+                var manufacturer = Regex.Match(content, @"Manufacturer:\s*(.+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
+                var model = Regex.Match(content, @"Model:\s*(.+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
+                var version = Regex.Match(content, @"Version:\s*(.+)", RegexOptions.IgnoreCase).Groups[1].Value.Trim();
+
+                if (!string.IsNullOrEmpty(manufacturer) && !string.IsNullOrEmpty(model))
+                {
+                    return $"{manufacturer} {model}" + (string.IsNullOrEmpty(version) ? "" : $" (Android {version})");
+                }
+
+                return "Unknown device";
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Failed to extract device info");
                 return "Unknown device";
             }
         }
@@ -95,26 +145,28 @@ namespace TestAPI.Controllers
         {
             try
             {
-                var stacktraceStart = content.IndexOf("Stacktrace:");
-                if (stacktraceStart > 0)
-                {
-                    var firstLine = content.Substring(stacktraceStart)
-                        .Split('\n')
-                        .FirstOrDefault(line => line.Trim().StartsWith("at ") && line.Contains("Exception"));
+                if (string.IsNullOrWhiteSpace(content)) return "Unknown";
 
-                    if (firstLine != null)
-                    {
-                        var exceptionMatch = Regex.Match(firstLine, @"(\w+\.\w+Exception)");
-                        if (exceptionMatch.Success)
-                        {
-                            return exceptionMatch.Groups[1].Value;
-                        }
-                    }
+                var stacktraceStart = content.IndexOf("Stacktrace:", StringComparison.OrdinalIgnoreCase);
+                if (stacktraceStart < 0) return "Unknown";
+
+                var stackLines = content.Substring(stacktraceStart)
+                    .Split('\n')
+                    .Select(l => l.Trim())
+                    .Where(l => l.StartsWith("at ") && l.Contains("Exception"))
+                    .ToList();
+
+                foreach (var line in stackLines)
+                {
+                    var match = Regex.Match(line, @"(\w+\.\w+Exception)");
+                    if (match.Success) return match.Groups[1].Value;
                 }
+
                 return "Unknown";
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Failed to extract exception type");
                 return "Unknown";
             }
         }
@@ -122,7 +174,10 @@ namespace TestAPI.Controllers
 
     public class LogUploadModel
     {
-        [Required]
+        [Required(ErrorMessage = "Log file is required.")]
         public IFormFile File { get; set; }
     }
+
+
+
 }

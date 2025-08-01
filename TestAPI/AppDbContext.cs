@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using TestAPI.Controllers;
 
 namespace TestAPI
 {
@@ -12,5 +13,6 @@ namespace TestAPI
         // Add your entities here
         // public DbSet<CrashLog> CrashLogs { get; set; }
         public DbSet<LogEntry> LogEntries { get; set; }
+        public DbSet<LoginEntryViewModel> LoginEntryViewModel { get; set; }
     }
 }
