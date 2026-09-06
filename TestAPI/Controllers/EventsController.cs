@@ -31,8 +31,8 @@ namespace TestAPI.Controllers
                     return BadRequest(new { success = false, message = "No events provided in batch request." });
                 }
 
-                var projectId = string.IsNullOrWhiteSpace(request.ProjectId) ? "default_project" : request.ProjectId;
-                var sessionId = string.IsNullOrWhiteSpace(request.SessionId) ? Guid.NewGuid().ToString() : request.SessionId;
+                var projectId = (string.IsNullOrWhiteSpace(request.ProjectId) || request.ProjectId == "string") ? "default_project" : request.ProjectId;
+                var sessionId = (string.IsNullOrWhiteSpace(request.SessionId) || request.SessionId == "string") ? Guid.NewGuid().ToString() : request.SessionId;
 
                 var hasCrash = request.Events.Any(e => e != null && string.Equals(e.Type, "Crash", StringComparison.OrdinalIgnoreCase));
 
@@ -44,9 +44,9 @@ namespace TestAPI.Controllers
                     {
                         SessionId = sessionId,
                         ProjectId = projectId,
-                        UserId = request.UserId,
-                        DeviceModel = request.DeviceModel,
-                        AppVersion = request.AppVersion,
+                        UserId = request.UserId == "string" ? null : request.UserId,
+                        DeviceModel = request.DeviceModel == "string" ? null : request.DeviceModel,
+                        AppVersion = request.AppVersion == "string" ? null : request.AppVersion,
                         StartTimeUtc = DateTime.UtcNow,
                         LastActivityUtc = DateTime.UtcNow,
                         EventCount = request.Events.Count,
@@ -62,7 +62,7 @@ namespace TestAPI.Controllers
                     {
                         session.HasCrash = true;
                     }
-                    if (!string.IsNullOrEmpty(request.UserId)) session.UserId = request.UserId;
+                    if (!string.IsNullOrEmpty(request.UserId) && request.UserId != "string") session.UserId = request.UserId;
                 }
 
                 // 2. Process each event
@@ -71,8 +71,8 @@ namespace TestAPI.Controllers
                 {
                     if (evt == null) continue;
 
-                    var eventId = string.IsNullOrWhiteSpace(evt.Id) ? Guid.NewGuid().ToString() : evt.Id;
-                    var eventType = string.IsNullOrWhiteSpace(evt.Type) ? "Log" : evt.Type;
+                    var eventId = (string.IsNullOrWhiteSpace(evt.Id) || evt.Id == "string") ? Guid.NewGuid().ToString() : evt.Id;
+                    var eventType = (string.IsNullOrWhiteSpace(evt.Type) || evt.Type == "string") ? "Log" : evt.Type;
                     var timestamp = evt.Timestamp > 0 ? evt.Timestamp : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                     var payloadJson = JsonSerializer.Serialize(evt);

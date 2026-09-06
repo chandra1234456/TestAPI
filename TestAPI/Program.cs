@@ -53,6 +53,17 @@ static string ParseConnectionString(string connStr)
             var host = uri.Host;
             var port = uri.Port > 0 ? uri.Port : 5432;
             var db = uri.AbsolutePath.TrimStart('/');
+
+            // Supabase IPv4 / IPv6 dual-stack pooler rewrite for Render deployment
+            if (host.Contains("supabase.co") || host.Contains("cxxugsvxwkmlvcegkhkg"))
+            {
+                host = "aws-0-ap-southeast-1.pooler.supabase.com";
+                if (!user.Contains("."))
+                {
+                    user = $"{user}.cxxugsvxwkmlvcegkhkg";
+                }
+            }
+
             return $"Host={host};Port={port};Database={db};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true";
         }
         catch
@@ -60,6 +71,17 @@ static string ParseConnectionString(string connStr)
             return connStr;
         }
     }
+
+    if (connStr.Contains("db.cxxugsvxwkmlvcegkhkg.supabase.co"))
+    {
+        connStr = connStr.Replace("db.cxxugsvxwkmlvcegkhkg.supabase.co", "aws-0-ap-southeast-1.pooler.supabase.com");
+        if (connStr.Contains("Username=postgres;") || connStr.Contains("User Id=postgres;"))
+        {
+            connStr = connStr.Replace("Username=postgres;", "Username=postgres.cxxugsvxwkmlvcegkhkg;")
+                             .Replace("User Id=postgres;", "User Id=postgres.cxxugsvxwkmlvcegkhkg;");
+        }
+    }
+
     return connStr;
 }
 
