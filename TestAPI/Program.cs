@@ -47,8 +47,7 @@ var app = builder.Build();
 // Enable CORS
 app.UseCors("AllowAll");
 
-// Serve Static Files (Web Dashboard in wwwroot)
-app.UseDefaultFiles();
+// Serve Static Files (if any, e.g. APKs)
 app.UseStaticFiles();
 
 // Auto-create/ensure DB schema on startup

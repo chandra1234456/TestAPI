@@ -297,7 +297,7 @@ val okHttpClient = OkHttpClient.Builder()
 ## 🖥️ Web Monitoring Dashboard
 
 The Web Monitoring Dashboard is hosted directly at the root URL of your Render service:
-`https://your-app.onrender.com/`
+`https://testapi-t5ie.onrender.com`
 
 Includes:
 - **Real-Time Telemetry Cards**: Total Events, Active Sessions, Total Crashes, Network Requests & Error Rate, Avg Latency.
