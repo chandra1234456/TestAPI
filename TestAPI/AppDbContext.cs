@@ -13,7 +13,6 @@ namespace TestAPI
         // Add your entities here
         // public DbSet<CrashLog> CrashLogs { get; set; }
         public DbSet<LogEntry> LogEntries { get; set; }
-        public DbSet<LoginEntryViewModel> LoginEntryViewModel { get; set; }
 
         // Debug SDK DbSets
         public DbSet<TestAPI.Models.SdkEvent> SdkEvents { get; set; }

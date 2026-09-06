@@ -29,12 +29,39 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ✅ Register DbContext
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+// ✅ Register DbContext (prioritize DATABASE_URL from Render, fallback to appsettings)
+var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "";
+
+var connectionString = ParseConnectionString(rawConnectionString);
 
 builder.Services.AddDbContext<TestAPI.AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+static string ParseConnectionString(string connStr)
+{
+    if (string.IsNullOrWhiteSpace(connStr)) return connStr;
+    if (connStr.StartsWith("postgres://") || connStr.StartsWith("postgresql://"))
+    {
+        try
+        {
+            var uri = new Uri(connStr);
+            var userInfo = uri.UserInfo.Split(':');
+            var user = Uri.UnescapeDataString(userInfo[0]);
+            var pass = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 5432;
+            var db = uri.AbsolutePath.TrimStart('/');
+            return $"Host={host};Port={port};Database={db};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true";
+        }
+        catch
+        {
+            return connStr;
+        }
+    }
+    return connStr;
+}
 
 // Configure Kestrel for Render (uses PORT env var, defaults to 5000)
 var portEnv = Environment.GetEnvironmentVariable("PORT");
@@ -60,6 +87,7 @@ using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<TestAPI.AppDbContext>();
         db.Database.EnsureCreated();
+        Console.WriteLine("✅ Supabase database connected successfully.");
     }
     catch (Exception ex)
     {
@@ -67,12 +95,12 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// 📌 Request Logging Middleware: Automatically records all API calls in Supabase DB (sdk_networks)
+// 📌 Request Logging Middleware: Automatically records API calls in Supabase DB (sdk_networks)
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value ?? "";
 
-    // Skip swagger documentation internal assets
+    // Skip swagger documentation internal assets & static assets
     if (path.EndsWith(".js") || path.EndsWith(".css") || path.EndsWith(".png") || path.EndsWith(".ico") || path == "/swagger/v1/swagger.json")
     {
         await next();
@@ -94,32 +122,42 @@ app.Use(async (context, next) =>
     finally
     {
         stopwatch.Stop();
-        try
-        {
-            using var logScope = context.RequestServices.CreateScope();
-            var db = logScope.ServiceProvider.GetRequiredService<TestAPI.AppDbContext>();
+        var method = context.Request.Method;
+        var fullUrl = $"{context.Request.Path}{context.Request.QueryString}";
+        var statusCode = context.Response.StatusCode;
+        var elapsedMs = stopwatch.ElapsedMilliseconds;
+        var errMsg = requestException?.Message;
 
-            var networkLog = new TestAPI.Models.SdkNetwork
+        // Async background write so request execution is never blocked
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                ProjectId = "api_server",
-                SessionId = "server_session",
-                Method = context.Request.Method,
-                Url = $"{context.Request.Path}{context.Request.QueryString}",
-                StatusCode = context.Response.StatusCode,
-                DurationMs = stopwatch.ElapsedMilliseconds,
-                ErrorMessage = requestException?.Message,
-                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                CreatedUtc = DateTime.UtcNow
-            };
+                using var logScope = app.Services.CreateScope();
+                var db = logScope.ServiceProvider.GetRequiredService<TestAPI.AppDbContext>();
 
-            db.SdkNetworks.Add(networkLog);
-            await db.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error logging API request to Supabase: {ex.Message}");
-        }
+                var networkLog = new TestAPI.Models.SdkNetwork
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ProjectId = "api_server",
+                    SessionId = "server_session",
+                    Method = method,
+                    Url = fullUrl,
+                    StatusCode = statusCode,
+                    DurationMs = elapsedMs,
+                    ErrorMessage = errMsg,
+                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                    CreatedUtc = DateTime.UtcNow
+                };
+
+                db.SdkNetworks.Add(networkLog);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Background API request log error: {ex.Message}");
+            }
+        });
     }
 });
 
