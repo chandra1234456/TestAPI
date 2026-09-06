@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>35df1254-580a-4dd6-8392-b46f25a509cf</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <CompressionExcludePatterns>**\*.apk</CompressionExcludePatterns>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,8 +16,6 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="wwwroot\APK\" />
-  </ItemGroup>
+
 
 </Project>

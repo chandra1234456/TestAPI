@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DebugSDK Pulse | Android SDK Monitoring Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --bg-card: rgba(22, 30, 49, 0.7);
+            --bg-card-hover: rgba(30, 41, 67, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-green: #10b981;
+            --radius: 12px;
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(139, 92, 246, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 2rem;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+            border-radius: 20px;
+            font-size: 0.825rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            outline: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-red);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glass-shadow);
+        }
+
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .metric-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .icon-events { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .icon-sessions { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+        .icon-crashes { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .icon-network { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+        .icon-latency { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .metric-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+
+        /* Tabs Navigation */
+        .tabs-nav {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.75rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        /* Content Sections */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .content-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            min-width: 280px;
+        }
+
+        .search-box input {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            outline: none;
+            font-size: 0.875rem;
+            width: 100%;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        /* Tables & Lists */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .data-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+        }
+
+        .data-table tr:hover td {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-log { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .badge-crash { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .badge-network { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+        .badge-breadcrumb { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); }
+        .badge-anr { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+
+        .badge-info { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .badge-warn { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .badge-error { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+
+        .method-get { color: var(--accent-green); font-weight: 700; }
+        .method-post { color: var(--accent-blue); font-weight: 700; }
+        .method-put { color: var(--accent-yellow); font-weight: 700; }
+        .method-delete { color: var(--accent-red); font-weight: 700; }
+
+        .code-block {
+            font-family: 'JetBrains Mono', monospace;
+            background: #060911;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            color: #38bdf8;
+            font-size: 0.825rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 1.75rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.25rem;
+            cursor: pointer;
+        }
+
+        .close-btn:hover { color: white; }
+
+        .timeline {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            box-shadow: 0 0 6px var(--accent-purple);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="brand-logo"><i class="fa-solid fa-bug"></i></div>
+            <div>
+                <div class="brand-title">DebugSDK Pulse</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Android Debug & Crash Dashboard</div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                Supabase Postgres Connected
+            </div>
+            <button class="btn btn-primary" onclick="triggerMockBatch()">
+                <i class="fa-solid fa-bolt"></i> Send Mock SDK Batch
+            </button>
+            <button class="btn btn-secondary" onclick="loadDashboard()">
+                <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+            <button class="btn btn-danger" onclick="clearAllEvents()">
+                <i class="fa-solid fa-trash"></i> Clear
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>TOTAL EVENTS</span>
+                    <div class="metric-icon icon-events"><i class="fa-solid fa-layer-group"></i></div>
+                </div>
+                <div class="metric-value" id="val-events">0</div>
+                <div class="metric-sub">Stored in Supabase DB</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>ACTIVE SESSIONS</span>
+                    <div class="metric-icon icon-sessions"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                </div>
+                <div class="metric-value" id="val-sessions">0</div>
+                <div class="metric-sub">Unique device instances</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>CRASHES</span>
+                    <div class="metric-icon icon-crashes"><i class="fa-solid fa-burst"></i></div>
+                </div>
+                <div class="metric-value" id="val-crashes" style="color: var(--accent-red)">0</div>
+                <div class="metric-sub">Uncaught exceptions</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>NETWORK CALLS</span>
+                    <div class="metric-icon icon-network"><i class="fa-solid fa-network-wired"></i></div>
+                </div>
+                <div class="metric-value" id="val-network">0</div>
+                <div class="metric-sub" id="val-network-err">0 errors</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <span>AVG LATENCY</span>
+                    <div class="metric-icon icon-latency"><i class="fa-solid fa-gauge-high"></i></div>
+                </div>
+                <div class="metric-value" id="val-latency">0 ms</div>
+                <div class="metric-sub">OkHttp interceptor timing</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('overview')"><i class="fa-solid fa-chart-pie"></i> Overview</button>
+            <button class="tab-btn" onclick="switchTab('events')"><i class="fa-solid fa-list-check"></i> Live Events</button>
+            <button class="tab-btn" onclick="switchTab('crashes')"><i class="fa-solid fa-triangle-exclamation"></i> Crash Reports</button>
+            <button class="tab-btn" onclick="switchTab('network')"><i class="fa-solid fa-globe"></i> Network Interceptor</button>
+            <button class="tab-btn" onclick="switchTab('sessions')"><i class="fa-solid fa-user-gear"></i> Sessions</button>
+        </div>
+
+        <!-- Tab 1: Overview -->
+        <div id="tab-overview" class="tab-content active">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                <div class="content-card">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;"><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity Stream</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Session</th>
+                                <th>Details</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-recent"></tbody>
+                    </table>
+                </div>
+
+                <div class="content-card">
+                    <h3 style="margin-bottom: 1rem; font-size: 1rem;"><i class="fa-solid fa-pie-chart"></i> Event Distribution</h3>
+                    <div id="distribution-list" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Live Events -->
+        <div id="tab-events" class="tab-content">
+            <div class="content-card">
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+                        <input type="text" id="search-events" placeholder="Search events by message or session..." onkeyup="filterEventsTable()">
+                    </div>
+                    <div class="filter-group">
+                        <select id="filter-type" onchange="loadEventsTab()">
+                            <option value="">All Event Types</option>
+                            <option value="Log">Log</option>
+                            <option value="Crash">Crash</option>
+                            <option value="Network">Network</option>
+                            <option value="Breadcrumb">Breadcrumb</option>
+                            <option value="ANR">ANR</option>
+                        </select>
+                    </div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Session ID</th>
+                            <th>Payload Summary</th>
+                            <th>Created UTC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-events"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Crash Reports -->
+        <div id="tab-crashes" class="tab-content">
+            <div class="content-card">
+                <h3 style="margin-bottom: 1rem; font-size: 1rem; color: var(--accent-red)"><i class="fa-solid fa-bug"></i> Uncaught Exception Reports</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Exception</th>
+                            <th>Message</th>
+                            <th>Session</th>
+                            <th>Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-crashes"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 4: Network Interceptor -->
+        <div id="tab-network" class="tab-content">
+            <div class="content-card">
+                <h3 style="margin-bottom: 1rem; font-size: 1rem;"><i class="fa-solid fa-network-wired"></i> OkHttp HTTP Interceptor Logs</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>URL</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-network"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 5: Sessions -->
+        <div id="tab-sessions" class="tab-content">
+            <div class="content-card">
+                <h3 style="margin-bottom: 1rem; font-size: 1rem;"><i class="fa-solid fa-mobile"></i> Device Session Timelines</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Device</th>
+                            <th>Events</th>
+                            <th>Crash Status</th>
+                            <th>Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-sessions"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Crash Detail Modal -->
+    <div class="modal-backdrop" id="crash-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <h3 style="color: var(--accent-red)" id="modal-exception">Exception Title</h3>
+                    <div style="font-size: 0.85rem; color: var(--text-muted)" id="modal-session">Session ID</div>
+                </div>
+                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Exception Message</h4>
+                <div class="code-block" id="modal-message"></div>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">Stack Trace</h4>
+                <div class="code-block" id="modal-stacktrace"></div>
+            </div>
+            <div>
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;"><i class="fa-solid fa-shoe-prints"></i> Preceding Breadcrumbs Timeline</h4>
+                <div class="timeline" id="modal-breadcrumbs"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/events';
+        let allEventsCache = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            setInterval(loadDashboard, 10000); // Auto-refresh every 10 sec
+        });
+
+        async function loadDashboard() {
+            try {
+                // 1. Load Summary
+                const resSum = await fetch(`${API_BASE}/summary`);
+                if (resSum.ok) {
+                    const sum = await resSum.json();
+                    document.getElementById('val-events').innerText = sum.totalEvents;
+                    document.getElementById('val-sessions').innerText = sum.totalSessions;
+                    document.getElementById('val-crashes').innerText = sum.totalCrashes;
+                    document.getElementById('val-network').innerText = sum.totalNetworkRequests;
+                    document.getElementById('val-network-err').innerText = `${sum.networkErrors} failed`;
+                    document.getElementById('val-latency').innerText = `${sum.averageLatencyMs} ms`;
+
+                    renderDistribution(sum.eventTypeBreakdown);
+                }
+
+                // 2. Load Recent Events for Overview
+                const resEvents = await fetch(`${API_BASE}?pageSize=20`);
+                if (resEvents.ok) {
+                    const data = await resEvents.json();
+                    allEventsCache = data.items || [];
+                    renderRecentTable(allEventsCache);
+                    renderEventsTable(allEventsCache);
+                }
+
+                // 3. Load Crashes
+                loadCrashesTab();
+
+                // 4. Load Network
+                loadNetworkTab();
+
+                // 5. Load Sessions
+                loadSessionsTab();
+
+            } catch (err) {
+                console.error('Failed to load dashboard:', err);
+            }
+        }
+
+        function renderRecentTable(items) {
+            const tbody = document.getElementById('table-recent');
+            if (!items.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty-state"><i class="fa-solid fa-inbox"></i><br>No events recorded yet. Click "Send Mock SDK Batch" to populate.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = items.slice(0, 8).map(e => `
+                <tr>
+                    <td><span class="badge badge-${e.type.toLowerCase()}">${e.type}</span></td>
+                    <td style="font-family: monospace; font-size: 0.8rem">${e.sessionId.substring(0, 12)}...</td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(e.payload)}</td>
+                    <td>${new Date(e.createdUtc).toLocaleTimeString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderDistribution(breakdown) {
+            const container = document.getElementById('distribution-list');
+            if (!breakdown || !Object.keys(breakdown).length) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem">No data</div>';
+                return;
+            }
+            const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
+            container.innerHTML = Object.entries(breakdown).map(([type, count]) => {
+                const pct = Math.round((count / total) * 100);
+                return `
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+                            <span>${type}</span>
+                            <span style="color: var(--text-muted)">${count} (${pct}%)</span>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); height: 6px; border-radius: 3px; overflow: hidden;">
+                            <div style="background: var(--accent-blue); width: ${pct}%; height: 100%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadEventsTab() {
+            const typeFilter = document.getElementById('filter-type').value;
+            const url = typeFilter ? `${API_BASE}?type=${typeFilter}&pageSize=50` : `${API_BASE}?pageSize=50`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                renderEventsTable(data.items);
+            }
+        }
+
+        function renderEventsTable(items) {
+            const tbody = document.getElementById('table-events');
+            if (!items || !items.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No events match filter.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = items.map(e => `
+                <tr>
+                    <td><span class="badge badge-${e.type.toLowerCase()}">${e.type}</span></td>
+                    <td style="font-family: monospace; font-size: 0.8rem">${e.sessionId}</td>
+                    <td style="max-width: 450px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(e.payload)}</td>
+                    <td>${new Date(e.createdUtc).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadCrashesTab() {
+            const res = await fetch(`${API_BASE}/crashes`);
+            if (res.ok) {
+                const data = await res.json();
+                const tbody = document.getElementById('table-crashes');
+                if (!data.items.length) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No crashes reported. App is running cleanly!</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.items.map(c => `
+                    <tr>
+                        <td style="color: var(--accent-red); font-weight: 600">${escapeHtml(c.exceptionName)}</td>
+                        <td>${escapeHtml(c.exceptionMessage)}</td>
+                        <td style="font-family: monospace; font-size: 0.8rem">${c.sessionId.substring(0, 10)}...</td>
+                        <td>${new Date(c.createdUtc).toLocaleTimeString()}</td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem" onclick='openCrashModal(${JSON.stringify(c)})'>
+                                <i class="fa-solid fa-eye"></i> View Trace
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function loadNetworkTab() {
+            const res = await fetch(`${API_BASE}/network`);
+            if (res.ok) {
+                const data = await res.json();
+                const tbody = document.getElementById('table-network');
+                if (!data.items.length) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No network logs recorded.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.items.map(n => {
+                    const statusClass = n.statusCode >= 200 && n.statusCode < 300 ? 'color: var(--accent-green)' : 'color: var(--accent-red)';
+                    const methodClass = `method-${n.method.toLowerCase()}`;
+                    return `
+                        <tr>
+                            <td><span class="${methodClass}">${n.method}</span></td>
+                            <td style="max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(n.url)}</td>
+                            <td style="${statusClass}; font-weight: 600">${n.statusCode || 'FAIL'}</td>
+                            <td>${n.durationMs} ms</td>
+                            <td>${new Date(n.createdUtc).toLocaleTimeString()}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function loadSessionsTab() {
+            const res = await fetch(`${API_BASE}/sessions`);
+            if (res.ok) {
+                const data = await res.json();
+                const tbody = document.getElementById('table-sessions');
+                if (!data.items.length) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No active sessions.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.items.map(s => `
+                    <tr>
+                        <td style="font-family: monospace">${s.sessionId}</td>
+                        <td>${s.deviceModel || 'Pixel 7 Pro'} (${s.appVersion || 'v1.0.0'})</td>
+                        <td>${s.eventCount}</td>
+                        <td>${s.hasCrash ? '<span class="badge badge-crash">Crashed</span>' : '<span class="badge badge-log">Healthy</span>'}</td>
+                        <td>${new Date(s.lastActivityUtc).toLocaleTimeString()}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function openCrashModal(crash) {
+            document.getElementById('modal-exception').innerText = crash.exceptionName;
+            document.getElementById('modal-session').innerText = `Session ID: ${crash.sessionId}`;
+            document.getElementById('modal-message').innerText = crash.exceptionMessage;
+            document.getElementById('modal-stacktrace').innerText = crash.stackTrace;
+
+            const bcContainer = document.getElementById('modal-breadcrumbs');
+            try {
+                const breadcrumbs = JSON.parse(crash.breadcrumbsJson || '[]');
+                if (breadcrumbs.length) {
+                    bcContainer.innerHTML = breadcrumbs.map(b => `<div class="timeline-item"><div style="font-size: 0.85rem">${escapeHtml(b)}</div></div>`).join('');
+                } else {
+                    bcContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem">No preceding breadcrumbs captured.</div>';
+                }
+            } catch (e) {
+                bcContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem">No breadcrumbs available.</div>';
+            }
+
+            document.getElementById('crash-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('crash-modal').classList.remove('active');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.currentTarget.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        async function triggerMockBatch() {
+            const mockSession = `session_${Math.random().toString(36).substr(2, 9)}`;
+            const mockBatch = {
+                projectId: "android_demo_app",
+                sessionId: mockSession,
+                userId: "user_test_99",
+                deviceModel: "Google Pixel 7 Pro",
+                appVersion: "1.2.4-debug",
+                events: [
+                    { type: "Log", message: "User opened Checkout screen", level: "INFO" },
+                    { type: "Breadcrumb", message: "User clicked 'Pay Now' button" },
+                    { type: "Network", method: "POST", url: "https://api.myapp.com/v1/payments", statusCode: 200, durationMs: 240 },
+                    { type: "Log", message: "Payment authorization retry initiated", level: "WARNING" },
+                    { type: "Network", method: "GET", url: "https://api.myapp.com/v1/user/account", statusCode: 500, durationMs: 1850, error: "Internal Server Error" },
+                    { 
+                        type: "Crash", 
+                        exception: "NullPointerException", 
+                        message: "Attempt to invoke virtual method 'String com.myapp.PaymentResult.getTxId()' on a null object reference", 
+                        stackTrace: "at com.myapp.checkout.CheckoutActivity.onPaymentSuccess(CheckoutActivity.kt:142)\nat com.myapp.checkout.CheckoutActivity.access$onPaymentSuccess(CheckoutActivity.kt:28)\nat com.myapp.checkout.CheckoutActivity$1.onResponse(CheckoutActivity.kt:98)",
+                        breadcrumbs: ["User opened checkout", "Selected Credit Card", "Clicked Pay Now", "API POST /payments 200 OK"]
+                    }
+                ]
+            };
+
+            const res = await fetch(`${API_BASE}/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mockBatch)
+            });
+
+            if (res.ok) {
+                loadDashboard();
+            }
+        }
+
+        async function clearAllEvents() {
+            if (confirm('Clear all events and session data from Supabase DB?')) {
+                await fetch(`${API_BASE}/clear`, { method: 'POST' });
+                loadDashboard();
+            }
+        }
+
+        function filterEventsTable() {
+            const query = document.getElementById('search-events').value.toLowerCase();
+            const filtered = allEventsCache.filter(e => 
+                e.sessionId.toLowerCase().includes(query) || 
+                (e.payload && e.payload.toLowerCase().includes(query))
+            );
+            renderEventsTable(filtered);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
