@@ -2,6 +2,9 @@
 
 using Microsoft.EntityFrameworkCore;
 
+// Enable Npgsql legacy timestamp behavior for PostgreSQL timestamp compatibility
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
@@ -63,6 +66,62 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"Error creating/connecting DB: {ex.Message}");
     }
 }
+
+// 📌 Request Logging Middleware: Automatically records all API calls in Supabase DB (sdk_networks)
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? "";
+
+    // Skip swagger documentation internal assets
+    if (path.EndsWith(".js") || path.EndsWith(".css") || path.EndsWith(".png") || path.EndsWith(".ico") || path == "/swagger/v1/swagger.json")
+    {
+        await next();
+        return;
+    }
+
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    Exception? requestException = null;
+
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        requestException = ex;
+        throw;
+    }
+    finally
+    {
+        stopwatch.Stop();
+        try
+        {
+            using var logScope = context.RequestServices.CreateScope();
+            var db = logScope.ServiceProvider.GetRequiredService<TestAPI.AppDbContext>();
+
+            var networkLog = new TestAPI.Models.SdkNetwork
+            {
+                Id = Guid.NewGuid().ToString(),
+                ProjectId = "api_server",
+                SessionId = "server_session",
+                Method = context.Request.Method,
+                Url = $"{context.Request.Path}{context.Request.QueryString}",
+                StatusCode = context.Response.StatusCode,
+                DurationMs = stopwatch.ElapsedMilliseconds,
+                ErrorMessage = requestException?.Message,
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                CreatedUtc = DateTime.UtcNow
+            };
+
+            db.SdkNetworks.Add(networkLog);
+            await db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error logging API request to Supabase: {ex.Message}");
+        }
+    }
+});
 
 // Enable Swagger always (served at application root /)
 app.UseSwagger();
