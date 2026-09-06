@@ -1,6 +1,6 @@
 # DebugSDK & Telemetry Backend API
 
-A complete, production-ready **Android Debug SDK**, **.NET 8 Web API Backend** connected to **Supabase PostgreSQL**, deployed on **Render**, featuring an interactive **Web Monitoring Dashboard**.
+A complete, production-ready **Android Debug SDK**, **.NET 8 Web API Backend** connected to **Supabase PostgreSQL**, deployed on **Render**, featuring interactive **Swagger API Documentation**.
 
 ---
 
@@ -294,12 +294,12 @@ val okHttpClient = OkHttpClient.Builder()
 
 ---
 
-## 🖥️ Web Monitoring Dashboard
+## 📖 Swagger API Documentation
 
-The Web Monitoring Dashboard is hosted directly at the root URL of your Render service:
-`https://testapi-t5ie.onrender.com`
+The interactive Swagger API Documentation is hosted directly at the root URL of your Render service:
+`https://testapi-t5ie.onrender.com/`
 
 Includes:
-- **Real-Time Telemetry Cards**: Total Events, Active Sessions, Total Crashes, Network Requests & Error Rate, Avg Latency.
-- **Interactive Crash Inspector**: Stack trace viewer with step-by-step breadcrumb timeline.
-- **Built-in Mock Generator**: Click **"Send Mock SDK Batch"** to trigger mock Android events directly from the browser!
+- **Interactive OpenAPI Explorer**: Test all `.NET 8 Web API` endpoints directly from your browser.
+- **Telemetry & Event Logs API**: `/api/events`, `/api/logs`
+- **Quote & Weather Endpoints**: `/api/quotes`, `/home/api`

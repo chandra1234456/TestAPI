@@ -64,11 +64,12 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Enable Swagger always
+// Enable Swagger always (served at application root /)
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Debug SDK API v1");
+    c.RoutePrefix = string.Empty; // Serves Swagger UI directly at root (/)
 });
 
 app.UseAuthorization();
